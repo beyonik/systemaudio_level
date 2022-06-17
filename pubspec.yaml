@@ -1,0 +1,12 @@
+name: system_audio_level
+
+environment:
+  sdk: '>=2.16.2 <3.0.0'
+
+
+dependencies:
+  path: ^1.8.0
+  ffi:
+
+dev_dependencies:
+  lints: ^1.0.0
