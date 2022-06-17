@@ -1,4 +1,5 @@
 name: system_audio_level
+version: 0.0.2
 
 environment:
   sdk: '>=2.16.2 <3.0.0'

@@ -15,10 +15,13 @@ class SystemAudioLevel {
       0x46, 0xde, 0x8d, 0xb6, 0x36, 0x17, 0xe6);
   static final _IID_IAudioMeterInformation = GUID(0xC02216F6, 0x8C67, 0x4B5B,
       0x9D, 0x00, 0xD0, 0x08, 0xE7, 0x3E, 0x00, 0x64);
+  static final _IID_IAudioEndpointVolume = GUID(0x5cdf2c82, 0x841e, 0x4546,
+      0x97, 0x22, 0x0c, 0xf7, 0x40, 0x78, 0x22, 0x9a);
 
   static final _devEnumerator = calloc<COMObject>();
   static final _meterDevice = calloc<Pointer<COMObject>>();
   static final _meterInfo = calloc<Pointer<COMObject>>();
+  static final _audioLevel = calloc<Pointer<COMObject>>();
 
   static late DynamicLibrary? _ole32;
   static DynamicLibrary get ole32 => _ole32!;
@@ -35,24 +38,36 @@ class SystemAudioLevel {
     );
 
     _GetDefaultAudioEndpoint(_devEnumerator, 0, 0, _meterDevice);
-    final guid = _IID_IAudioMeterInformation.pointer();
-    _Activate(_meterDevice.cast(), guid, 23, Pointer<Void>.fromAddress(0),
-        _meterInfo);
+    final guidAudioMeter = _IID_IAudioMeterInformation.pointer();
+    _Activate(_meterDevice.cast(), guidAudioMeter, 23,
+        Pointer<Void>.fromAddress(0), _meterInfo);
+
+    final guidAudioLevel = _IID_IAudioEndpointVolume.pointer();
+    _Activate(_meterDevice.cast(), guidAudioLevel, 23,
+        Pointer<Void>.fromAddress(0), _audioLevel);
+
+    calloc.free(guidAudioLevel);
   }
 
-  static double getAmplitude() =>
-      _meterInfo.address != 0 ? _GetPeakValue(_meterInfo.cast()) : 0.0;
+  static double getAmplitude() => _meterInfo.address != 0
+      ? _GetDoubleValueFromComVTable(_meterInfo.cast(), 3)
+      : 0.0;
 
-  static double _GetPeakValue(Pointer<COMObject> audioMeterInfo) {
-    final function = audioMeterInfo.ref.vtable
-        .elementAt(3)
+  static double getVolume() => _audioLevel.address != 0
+      ? _GetDoubleValueFromComVTable(_audioLevel.cast(), 9)
+      : 0.0;
+
+  static double _GetDoubleValueFromComVTable(
+      Pointer<COMObject> comObject, int index) {
+    final function = comObject.ref.vtable
+        .elementAt(index)
         .cast<
             Pointer<
                 NativeFunction<IntPtr Function(Pointer, Pointer<Float> out)>>>()
         .value
         .asFunction<int Function(Pointer, Pointer<Float> out)>();
     final peak = calloc<Float>();
-    final hr = function(audioMeterInfo.ref.lpVtbl, peak);
+    final hr = function(comObject.ref.lpVtbl, peak);
     final ret = peak.value;
     calloc.free(peak);
     return ret;
@@ -113,7 +128,9 @@ class SystemAudioLevel {
     _Release(_meterInfo.cast());
     _Release(_meterDevice.cast());
     _Release(_devEnumerator.cast());
+    _Release(_audioLevel.cast());
     calloc.free(_meterDevice);
+    calloc.free(_audioLevel);
     calloc.free(_devEnumerator);
     calloc.free(_meterInfo);
     COMFFI.CoUninitialize();

@@ -6,7 +6,7 @@ void main(List<String> arguments) {
   SystemAudioLevel.initialize();
   while (true) {
     sleep(const Duration(milliseconds: 100));
-    print(SystemAudioLevel.getAmplitude());
+    print("${SystemAudioLevel.getAmplitude() / SystemAudioLevel.getVolume()}");
   }
   SystemAudioLevel.dispose();
 }
