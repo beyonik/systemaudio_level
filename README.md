@@ -1,1 +1,1 @@
-A simple command-line application.
+Get system audio intensity on Windows from Dart.
